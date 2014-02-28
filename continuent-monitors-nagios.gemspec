@@ -18,7 +18,7 @@
 Gem::Specification.new do |s|
   s.name        = 'continuent-monitors-nagios'
   s.version     = '0.0.2'
-  s.date        = '2014-02-24'
+  s.date        = Date.today.to_s
   s.summary     = "Continuent monitoring scripts for Nagios"
   s.authors     = ["Continuent"]
   s.email       = 'info@continuent.com'
