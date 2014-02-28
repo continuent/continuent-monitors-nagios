@@ -1,0 +1,81 @@
+#!/usr/bin/env ruby
+# Copyright (C) 2014 Continuent, Inc.
+# 
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License.  You may obtain
+# a copy of the License at
+# 
+#         http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+# Initial developer(s): Jeff Mace
+# Contributor(s):
+
+begin
+  require 'rubygems'
+  gem 'continuent-tools-core'
+rescue LoadError
+end
+
+require 'continuent-tools-core'
+require 'continuent-tools-nagios-monitor'
+
+class ContinuentNagiosMonitorThreads
+  include TungstenScript
+  include TungstenNagiosMonitor
+  
+  def main
+    count = TU.tungsten_cmd_result(opt(:thread_count_command))
+    add_perfdata("threads", count)
+  end
+  
+  def configure
+    super()
+    
+    add_option(:component, {
+      :on => "--component String",
+      :help => "The Tungsten component to return a Java PID for"
+    })
+    
+    add_option(:match, {
+      :on => "--match String",
+      :help => "String to match on to limit the thread count"
+    })
+  end
+  
+  def validate
+    super()
+    
+    unless TU.is_valid?()
+      return TU.is_valid?()
+    end
+    
+    args = []
+    args << "--component=#{opt(:component)}"
+    if opt(:match)
+      args << "--match=#{opt(:match)}"
+    end
+    opt(:thread_count_command, "tungsten_java_thread_count #{args.join(' ')}")
+    
+    begin
+      TU.tungsten_cmd_result("#{opt(:thread_count_command)} --validate")
+    rescue CommandError => ce
+      TU.debug(ce)
+    end
+  end
+  
+  def uses_nagios_comparison_levels?
+    true
+  end
+  
+  def script_name
+    "tungsten_nagios_monitor_threads"
+  end
+  
+  self.new().run()
+end
