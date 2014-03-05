@@ -28,10 +28,25 @@ require 'continuent-tools-nagios-monitor'
 class ContinuentNagiosMonitorThreads
   include TungstenScript
   include TungstenNagiosMonitor
+  private
   
   def main
     count = TU.tungsten_cmd_result(opt(:thread_count_command))
+    
     add_perfdata("threads", count)
+    check_threshold(count)
+  end
+  
+  def build_ok_message(value)
+    "Thread count is OK (#{value})"
+  end
+  
+  def build_warning_message(value)
+    "Thread count is too high (#{value})"
+  end
+  
+  def build_critical_message(value)
+    "Thread count is too high (#{value})"
   end
   
   def configure
@@ -69,7 +84,7 @@ class ContinuentNagiosMonitorThreads
     end
   end
   
-  def uses_nagios_comparison_levels?
+  def uses_thresholds?
     true
   end
   

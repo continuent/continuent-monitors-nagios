@@ -19,7 +19,7 @@ Gem::Specification.new do |s|
   s.name        = 'continuent-monitors-nagios'
   s.version     = '0.0.2'
   s.date        = Date.today.to_s
-  s.summary     = "Continuent monitoring scripts for Nagios"
+  s.summary     = "Continuent Tungsten monitoring scripts for Nagios"
   s.authors     = ["Continuent"]
   s.email       = 'info@continuent.com'
   s.files       = Dir.glob("{bin,lib}/**/*") + %w(LICENSE README.md)
@@ -29,5 +29,5 @@ Gem::Specification.new do |s|
   s.homepage    =
     'https://github.com/continuent/continuent-monitors-nagios'
   s.license       = 'Apache-2.0'
-  s.add_runtime_dependency 'continuent-tools-monitoring'
+  s.add_runtime_dependency 'continuent-tools-monitoring', '>= 0.1.0'
 end
