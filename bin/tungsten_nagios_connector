@@ -1,0 +1,92 @@
+#!/usr/bin/env ruby
+# Copyright (C) 2014 Continuent, Inc.
+# 
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License.  You may obtain
+# a copy of the License at
+# 
+#         http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+# Initial developer(s): Jeff Mace
+# Contributor(s):
+
+begin
+  require 'rubygems'
+  gem 'continuent-tools-core'
+rescue LoadError
+end
+
+require 'continuent-tools-core'
+require 'continuent-tools-nagios-monitor'
+
+class ContinuentNagiosMonitorConnector
+  include TungstenScript
+  include TungstenNagiosMonitor
+  private
+  
+  def main
+    unless TI.is_running?("connector")
+      critical("The Tungsten Connector is not running")
+    end
+    
+    begin
+      TU.cmd_result("echo '#{opt(:statement)}' | mysql --defaults-file=#{opt(:defaults_file)} -h#{TI.hostname()}")
+    rescue CommandError => ce
+      TU.debug(ce)
+      critical("A connection to the Tungsten Connector could not be created")
+    end
+    
+    ok("The connection was successfully created")
+  end
+  
+  def configure
+    super()
+    
+    add_option(:defaults_file, {
+      :on => "--defaults-file String",
+      :aliases => ["-f String"],
+      :help => "The defaults file to use when connecting to MySQL"
+    })
+    
+    add_option(:statement, {
+      :on => "--statement String",
+      :help => "The command to run against the Tungsten Connector",
+      :default => "tungsten connection status",
+    })
+  end
+  
+  def validate
+    super()
+    
+    unless TU.is_valid?()
+      return TU.is_valid?()
+    end
+    
+    unless TI.is_connector?()
+      unknown("This server is not a Tungsten Connector")
+    end
+    
+    if opt(:defaults_file).to_s() == ""
+      defaults_file = Tempfile.new("tungsten_nagios_connector")
+      opt(:defaults_file, defaults_file.path())
+      
+      defaults_file.puts("[client]")
+      defaults_file.puts("user=#{TI.setting(TI.setting_key(CONNECTORS, "connector_user"))}")
+      defaults_file.puts("password=#{TI.setting(TI.setting_key(CONNECTORS, "connector_password"))}")
+      defaults_file.puts("port=#{TI.setting(TI.setting_key(CONNECTORS, "connector_listen_port"))}")
+      defaults_file.flush()
+    end
+  end
+  
+  def script_name
+    "tungsten_nagios_connector"
+  end
+  
+  self.new().run()
+end
