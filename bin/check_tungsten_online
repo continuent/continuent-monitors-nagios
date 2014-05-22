@@ -1,4 +1,20 @@
 #!/bin/bash
+# Copyright (C) 2014 Continuent, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License.  You may obtain
+# a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+# Initial developer(s): Jeff Mace
+# Contributor(s):
 #
 # Simple Bash Script To Check Tungsten Services
 # Nagios Plugin For NRPE
@@ -16,16 +32,18 @@ error_message=""
 error_messaage_glue=""
 offline_count=0
 dataservice=""
+skip_shun=0
 
 function display_help()
 {
   echo "Usage: ./check_tungsten_online -s dataservice [-h]"
   echo " -s                     The data service you would like to check"
   echo " -h                     Display this message"
+  echo " -n                     Skip Shunned Services"
   exit 0
 }
 
-while getopts "s:h" Option
+while getopts "s:h:n" Option
 do
   case $Option in
     h )
@@ -33,6 +51,9 @@ do
     ;;
     s   )
     dataservice=$OPTARG
+    ;;
+    n   )
+    skip_shun=1
     ;;
   esac
 done
@@ -63,16 +84,20 @@ then
   exit $CRITICAL_STATE
 fi
 
-if [ "$dataservice" == "" ]; then
-    shunned=`echo "ls" | ${THOME}/../../tungsten-manager/bin/cctrl | grep 'SHUNNED' | wc -l`
-else
-    shunned=`echo "use $dataservice; ls" | ${THOME}/../../tungsten-manager/bin/cctrl -multi  | grep 'SHUNNED' | wc -l`
-fi
 
-if [ $shunned -gt 0 ]
+if [ $skip_shun -eq 0 ]
 then
-  echo "CRITICAL: Dataservices are shunned"
-  exit $CRITICAL_STATE
+    if [ "$dataservice" == "" ]; then
+        shunned=`echo "ls" | ${THOME}/../../tungsten-manager/bin/cctrl | grep 'SHUNNED' | wc -l`
+    else
+        shunned=`echo "use $dataservice; ls" | ${THOME}/../../tungsten-manager/bin/cctrl -multi  | grep 'SHUNNED' | wc -l`
+    fi
+
+    if [ $shunned -gt 0 ]
+    then
+      echo "CRITICAL: Dataservices are shunned"
+      exit $CRITICAL_STATE
+    fi
 fi
 
 
