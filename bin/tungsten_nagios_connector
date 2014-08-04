@@ -50,7 +50,6 @@ class ContinuentNagiosMonitorConnector
     
     add_option(:defaults_file, {
       :on => "--defaults-file String",
-      :aliases => ["-f String"],
       :help => "The defaults file to use when connecting to MySQL"
     })
     
