@@ -50,6 +50,9 @@ class ContinuentNagiosMonitorProgress
     end
     
     opt_default(:service, TI.default_dataservice())
+    if opt(:service) == nil
+      critical("The --service option was not given")
+    end
     
     unless TI.trepctl_value(opt(:service), "state") == "ONLINE"
       critical("The #{opt(:service)} replication service is not ONLINE")
@@ -79,8 +82,10 @@ class ContinuentNagiosMonitorProgress
   def configure
     super()
     
+    description("Check that the replication service is making progress. For Continuent Tungsten installations, a heartbeat command will be run to force activity.")
+    
     add_option(:delay, {
-      :on => "--t String",
+      :on => "--delay String",
       :help => "The number of seconds to wait when monitoring progress",
       :parse => method(:parse_integer_option),
       :default => 1

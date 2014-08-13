@@ -52,6 +52,8 @@ class ContinuentNagiosMonitorThreads
   def configure
     super()
     
+    description("Check the number of JVM threads for the specified component")
+    
     add_option(:component, {
       :on => "--component String",
       :help => "The Tungsten component to return a Java PID for"

@@ -74,6 +74,7 @@ class CheckTungstenBackups
     super()
     
     description("Check all local datasources to make sure one of them has a backup younger than the max allowed age")
+    
     add_option(:max_backup_age, {
       :on => "--max-backup-age String",
       :help => "Maximum allowed age in seconds of a backup on any machine",

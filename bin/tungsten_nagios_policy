@@ -47,6 +47,12 @@ class ContinuentNagiosMonitorPolicy
     end
   end
   
+  def configure
+    super()
+    
+    description("Check that the local cluster is running in the AUTOMATIC policy")
+  end
+  
   def script_name
     "tungsten_nagios_policy"
   end

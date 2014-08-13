@@ -31,6 +31,7 @@ class ContinuentNagiosMonitorLatency
   private
   
   def main
+    opt_default(:service, TI.default_dataservice())
     if opt(:service) == nil
       critical("The --service option was not given")
     end
@@ -116,6 +117,8 @@ class ContinuentNagiosMonitorLatency
   
   def configure
     super()
+    
+    description("Check the latency for all datasources in the specified --service. If it is a Tungsten Replicator, only the local host will be checked.")
     
     add_option(:service, {
       :on => "--service String",

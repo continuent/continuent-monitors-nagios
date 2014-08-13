@@ -63,14 +63,8 @@ class ContinuentNagiosMonitorServices
   
   def configure
     super()
-  end
-  
-  def validate
-    super()
     
-    unless TU.is_valid?()
-      return TU.is_valid?()
-    end
+    description("Check that all configured services for the installation are running.")
   end
   
   def script_name

@@ -52,9 +52,12 @@ class ContinuentNagiosMonitorConnector
   def configure
     super()
     
+    description("Test the Tungsten Connector using credentials from --defaults-file.")
+    
     add_option(:defaults_file, {
       :on => "--defaults-file String",
-      :help => "The defaults file to use when connecting to MySQL"
+      :help => "The defaults file to use when connecting to MySQL",
+      :required => true
     })
     
     add_option(:statement, {
