@@ -1,0 +1,81 @@
+#!/usr/bin/env ruby
+# Copyright (C) 2014 Continuent, Inc.
+# 
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License.  You may obtain
+# a copy of the License at
+# 
+#         http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+# Initial developer(s): Jeff Mace
+# Contributor(s):
+
+begin
+  require 'rubygems'
+  gem 'continuent-tools-core'
+rescue LoadError
+end
+
+require 'continuent-tools-core'
+require 'continuent-tools-nagios-monitor'
+
+class ContinuentNagiosMonitorServices
+  include TungstenScript
+  include TungstenNagiosMonitor
+  private
+  
+  def main
+    missing_services = []
+    checked_services = []
+    
+    [
+      "replicator",
+      "manager",
+      "connector"
+    ].each{
+      |svc|
+      
+      unless TI.setting(TI.setting_key(HOSTS, "host_enable_" + svc)) == "true"
+        next
+      end
+      
+      checked_services << svc
+      
+      unless TI.is_running?(svc)
+        missing_services << svc
+      end
+    }
+    
+    if missing_services.size() > 0
+      critical("#{missing_services.join(', ')} #{TU.pluralize(missing_services, 'is', 'are')} not running")
+    elsif checked_services.size() == 0
+      critical("No services were checked")
+    else
+      ok("All services (#{checked_services.join(', ')}) are running")
+    end
+  end
+  
+  def configure
+    super()
+  end
+  
+  def validate
+    super()
+    
+    unless TU.is_valid?()
+      return TU.is_valid?()
+    end
+  end
+  
+  def script_name
+    "tungsten_nagios_services"
+  end
+  
+  self.new().run()
+end

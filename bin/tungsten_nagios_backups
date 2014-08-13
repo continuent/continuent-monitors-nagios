@@ -1,19 +1,39 @@
 #!/usr/bin/env ruby
+# Copyright (C) 2014 Continuent, Inc.
+# 
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License.  You may obtain
+# a copy of the License at
+# 
+#         http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations
+# under the License.
 #
-# The script should be run as the tungsten user to ensure the
-# environment is set correctly.  Export the environment variables before
-# calling the script to modify behavior
-#
+# Initial developer(s): Jeff Mace
+# Contributor(s):
 
-require "#{File.dirname(__FILE__)}/../lib/ruby/tungsten"
+begin
+  require 'rubygems'
+  gem 'continuent-tools-core'
+rescue LoadError
+end
+
+require 'continuent-tools-core'
+require 'continuent-tools-nagios-monitor'
 
 class CheckTungstenBackups
   include TungstenScript
+  include TungstenNagiosMonitor
+  private
   
   def main
     status = TI.status()
     unless status.coordinator() == TI.hostname()
-      nagios_ok("Not running check because this node is not the coordinator")
+      ok("Not running check because this node is not the coordinator")
     end
     seconds_since_epoch = TU.cmd_result("date +%s").to_i()
     most_recent_backup = nil
@@ -39,14 +59,14 @@ class CheckTungstenBackups
     }
     
     if most_recent_backup == nil
-      nagios_critical("Unable to find a backup on any datasource")
+      critical("Unable to find a backup on any datasource")
     end
     
     age = seconds_since_epoch-most_recent_backup[:seconds]
     if age > @options[:max_backup_age]
-      nagios_critical("#{most_recent_backup[:hostname]}:#{most_recent_backup[:filename]} [#{age}s] is older than #{@options[:max_backup_age]}s")
+      critical("#{most_recent_backup[:hostname]}:#{most_recent_backup[:filename]} [#{age}s] is older than #{@options[:max_backup_age]}s")
     else
-      nagios_ok("The most recent backup is #{most_recent_backup[:hostname]}:#{most_recent_backup[:filename]} [#{age}s]")
+      ok("The most recent backup is #{most_recent_backup[:hostname]}:#{most_recent_backup[:filename]} [#{age}s]")
     end
   end
   
@@ -63,7 +83,7 @@ class CheckTungstenBackups
   end
   
   def script_name
-    "check_tungsten_backups"
+    "tungsten_nagios_backups"
   end
   
   self.new().run()

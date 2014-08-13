@@ -31,8 +31,12 @@ class ContinuentNagiosMonitorConnector
   private
   
   def main
+    unless TI.is_connector?()
+      critical("The server is not a Continuent Tungsten Connector")
+    end
+    
     unless TI.is_running?("connector")
-      critical("The Tungsten Connector is not running")
+      critical("The Continuent Tungsten Connector is not running")
     end
     
     begin
