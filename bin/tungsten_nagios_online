@@ -31,19 +31,6 @@ class ContinuentNagiosMonitorOnline
   private
   
   def main
-    opt_default(:service, TI.default_dataservice())
-    if opt(:service) == nil
-      critical("The --service option was not given")
-    end
-    
-    unless TI.is_replicator?()
-      critical("The server is not a Tungsten Replicator")
-    end
-    
-    unless TI.is_running?("replicator")
-      critical("The Tungsten Replicator is not running")
-    end
-    
     if TI.is_commercial?()
       unless TI.is_manager?()
         critical("The server is not a Continuent Tungsten Manager")
@@ -52,6 +39,19 @@ class ContinuentNagiosMonitorOnline
       unless TI.is_running?("manager")
         critical("The Continuent Tungsten Manager is not running")
       end
+    else
+      unless TI.is_replicator?()
+        critical("The server is not a Tungsten Replicator")
+      end
+
+      unless TI.is_running?("replicator")
+        critical("The Tungsten Replicator is not running")
+      end
+    end
+    
+    opt_default(:service, TI.default_dataservice())
+    if opt(:service) == nil
+      critical("The --service option was not given")
     end
     
     not_online = []
