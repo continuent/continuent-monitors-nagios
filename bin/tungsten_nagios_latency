@@ -1,0 +1,159 @@
+#!/usr/bin/env ruby
+# Copyright (C) 2014 Continuent, Inc.
+# 
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License.  You may obtain
+# a copy of the License at
+# 
+#         http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+# Initial developer(s): Jeff Mace
+# Contributor(s):
+
+begin
+  require 'rubygems'
+  gem 'continuent-tools-core'
+rescue LoadError
+end
+
+require 'continuent-tools-core'
+require 'continuent-tools-nagios-monitor'
+
+class ContinuentNagiosMonitorLatency
+  include TungstenScript
+  include TungstenNagiosMonitor
+  private
+  
+  def main
+    if TI.is_commercial?()
+      unless TI.is_manager?()
+        critical("The server is not a Continuent Tungsten Manager")
+      end
+
+      unless TI.is_running?("manager")
+        critical("The Continuent Tungsten Manager is not running")
+      end
+    else
+      unless TI.is_replicator?()
+        critical("The server is not a Tungsten Replicator")
+      end
+
+      unless TI.is_running?("replicator")
+        critical("The Tungsten Replicator is not running")
+      end
+    end
+    
+    opt_default(:service, TI.default_dataservice())
+    if opt(:service) == nil
+      critical("The --service option was not given")
+    end
+    
+    max_latency = 0
+    errors = []
+    perslave_performance_data = []
+    
+    status = TI.status(opt(:service))
+    if status.is_composite?()
+      # Composite Dataservice
+      critical("Unable to check latency on #{opt(:service)} because it is a composite dataservice")
+    else
+      status.replicators().each{
+        |hostname|
+        # Ignore this host since the datasource is shunned
+        if opt(:skip_shunned) == true && status.is_physical?()
+          if status.datasource_status(hostname) == "SHUNNED"
+            next
+          end
+        end
+        
+        latency = status.replicator_latency(hostname)
+        
+        # Check for some special cases
+        if latency.to_s() == "-1"
+          errors << "#{hostname} is missing latency information"
+          next
+        end
+        unless latency.to_s() =~ /^[0-9\.]+$/
+          errors << "#{hostname} is missing latency information"
+          next
+        end
+        
+        latency = latency.to_s().to_f()
+        if is_critical?(latency) || is_warning?(latency)
+          errors << "#{hostname}=#{latency}s"
+        end
+        
+        if latency > max_latency
+          max_latency = latency
+        end
+        
+        perslave_performance_data << "#{hostname}=#{latency};#{opt(:warning_level)};#{opt(:critical_level)};;"
+      }
+    end
+    
+    if opt(:perslave_perfdata) == true
+      perslave_performance_data.each{
+        |p|
+         @perfdata <<  p
+      }
+    elsif opt(:perfdata) == true
+      @perfdata << "max_latency=#{max_latency};#{opt(:warning_level)};#{opt(:critical_level)};;"
+    end
+    
+    if is_critical?(max_latency)
+      critical(errors.join(', '))
+    elsif is_warning?(max_latency)
+      warning(errors.join(', '))
+    else
+      ok("All slaves are running normally (max_latency=#{max_latency})")
+    end
+  end
+  
+  def configure
+    super()
+    
+    description("Check the latency for all datasources in the specified --service. If it is a Tungsten Replicator, only the local host will be checked.")
+    
+    add_option(:service, {
+      :on => "--service String",
+      :help => "The replication service or cluster to check"
+    })
+    
+    add_option(:skip_shunned, {
+      :on => "--skip-shunned String",
+      :help => "Ignore Continuent Tungsten datasources that have been shunned.",
+      :parse => method(:parse_boolean_option),
+      :default => "false",
+    })
+    
+    add_option(:perfdata, {
+      :on => "--perfdata String",
+      :help => "Display max_latency performance data",
+      :parse => method(:parse_boolean_option),
+      :default => "false",
+    })
+    
+    add_option(:perslave_perfdata, {
+      :on => "--perslave-perfdata String",
+      :help => "Display latency performance data for every replicator",
+      :parse => method(:parse_boolean_option),
+      :default => "false",
+    })
+  end
+  
+  def script_name
+    "tungsten_nagios_latency"
+  end
+  
+  def uses_thresholds?
+    true
+  end
+  
+  self.new().run()
+end

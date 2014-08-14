@@ -1,0 +1,105 @@
+#!/usr/bin/env ruby
+# Copyright (C) 2014 Continuent, Inc.
+# 
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License.  You may obtain
+# a copy of the License at
+# 
+#         http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+# Initial developer(s): Jeff Mace
+# Contributor(s):
+
+begin
+  require 'rubygems'
+  gem 'continuent-tools-core'
+rescue LoadError
+end
+
+require 'continuent-tools-core'
+require 'continuent-tools-nagios-monitor'
+
+class ContinuentNagiosMonitorProgress
+  include TungstenScript
+  include TungstenNagiosMonitor
+  private
+  
+  def main
+    unless TI.is_replicator?()
+      critical("The server is not a Tungsten Replicator")
+    end
+    
+    unless TI.is_running?("replicator")
+      critical("The Tungsten Replicator is not running")
+    end
+    
+    if TI.is_commercial?()
+      unless TI.is_manager?()
+        critical("The server is not a Continuent Tungsten Manager")
+      end
+
+      unless TI.is_running?("manager")
+        critical("The Continuent Tungsten Manager is not running")
+      end
+    end
+    
+    opt_default(:service, TI.default_dataservice())
+    if opt(:service) == nil
+      critical("The --service option was not given")
+    end
+    
+    unless TI.trepctl_value(opt(:service), "state") == "ONLINE"
+      critical("The #{opt(:service)} replication service is not ONLINE")
+    end
+    
+    pre_seqno = TI.trepctl_value(opt(:service), "appliedLastSeqno").to_s().to_f()
+    
+    if TI.is_commercial?()
+      TI.ensure_cctrl("cluster heartbeat")
+    end
+    
+    if opt(:delay).is_a?(Integer)
+      TU.debug("Go to sleep for #{opt(:delay)} seconds")
+      sleep(opt(:delay))
+    end
+    
+    post_seqno = TI.trepctl_value(opt(:service), "appliedLastSeqno").to_s().to_f()
+    difference = post_seqno - pre_seqno
+    
+    if difference > 0
+      ok("Tungsten Replicator #{opt(:service)} service is making progress")
+    else
+      critical("Tungsten Replicator #{opt(:service)} service did not show progress")
+    end
+  end
+  
+  def configure
+    super()
+    
+    description("Check that the replication service is making progress. For Continuent Tungsten installations, a heartbeat command will be run to force activity.")
+    
+    add_option(:delay, {
+      :on => "--delay String",
+      :help => "The number of seconds to wait when monitoring progress",
+      :parse => method(:parse_integer_option),
+      :default => 1
+    })
+    
+    add_option(:service, {
+      :on => "--service String",
+      :help => "The replication service or cluster to check"
+    })
+  end
+  
+  def script_name
+    "tungsten_nagios_progress"
+  end
+  
+  self.new().run()
+end

@@ -31,8 +31,12 @@ class ContinuentNagiosMonitorConnector
   private
   
   def main
+    unless TI.is_connector?()
+      critical("The server is not a Continuent Tungsten Connector")
+    end
+    
     unless TI.is_running?("connector")
-      critical("The Tungsten Connector is not running")
+      critical("The Continuent Tungsten Connector is not running")
     end
     
     begin
@@ -48,9 +52,12 @@ class ContinuentNagiosMonitorConnector
   def configure
     super()
     
+    description("Test the Tungsten Connector using credentials from --defaults-file.")
+    
     add_option(:defaults_file, {
       :on => "--defaults-file String",
-      :help => "The defaults file to use when connecting to MySQL"
+      :help => "The defaults file to use when connecting to MySQL",
+      :required => true
     })
     
     add_option(:statement, {

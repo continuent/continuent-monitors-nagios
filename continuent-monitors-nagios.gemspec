@@ -17,7 +17,7 @@
 
 Gem::Specification.new do |s|
   s.name        = 'continuent-monitors-nagios'
-  s.version     = '0.0.2'
+  s.version     = '0.0.3'
   s.date        = Date.today.to_s
   s.summary     = "Continuent Tungsten monitoring scripts for Nagios"
   s.authors     = ["Continuent"]
