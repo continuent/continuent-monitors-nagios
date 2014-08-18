@@ -56,8 +56,7 @@ class ContinuentNagiosMonitorConnector
     
     add_option(:defaults_file, {
       :on => "--defaults-file String",
-      :help => "The defaults file to use when connecting to MySQL",
-      :required => true
+      :help => "The defaults file to use when connecting to MySQL"
     })
     
     add_option(:statement, {
@@ -82,11 +81,13 @@ class ContinuentNagiosMonitorConnector
       defaults_file = Tempfile.new("tungsten_nagios_connector")
       opt(:defaults_file, defaults_file.path())
       
+      TU.log_cmd_results?(false)
       defaults_file.puts("[client]")
       defaults_file.puts("user=#{TI.setting(TI.setting_key(CONNECTORS, "connector_user"))}")
       defaults_file.puts("password=#{TI.setting(TI.setting_key(CONNECTORS, "connector_password"))}")
       defaults_file.puts("port=#{TI.setting(TI.setting_key(CONNECTORS, "connector_listen_port"))}")
       defaults_file.flush()
+      TU.log_cmd_results?(true)
     end
   end
   
