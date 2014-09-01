@@ -77,10 +77,12 @@ class ContinuentNagiosMonitorLatency
         # Check for some special cases
         if latency.to_s() == "-1"
           errors << "#{hostname} is missing latency information"
+          max_latency=999999
           next
         end
         unless latency.to_s() =~ /^[0-9\.]+$/
           errors << "#{hostname} is missing latency information"
+          max_latency=999999
           next
         end
         
