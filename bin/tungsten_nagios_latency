@@ -56,6 +56,7 @@ class ContinuentNagiosMonitorLatency
     
     max_latency = 0
     errors = []
+    info = []
     perslave_performance_data = []
     
     status = TI.status(opt(:service))
@@ -86,7 +87,7 @@ class ContinuentNagiosMonitorLatency
         
         latency = latency.to_s().to_f()
         if is_critical?(latency) || is_warning?(latency)
-          errors << "#{hostname}=#{latency}s"
+          info << "#{hostname}=#{latency}s"
         end
         
         if latency > max_latency
@@ -106,10 +107,12 @@ class ContinuentNagiosMonitorLatency
       @perfdata << "max_latency=#{max_latency};#{opt(:warning_level)};#{opt(:critical_level)};;"
     end
     
-    if is_critical?(max_latency)
-      critical(errors.join(', '))
+    if errors.size() > 0
+      critical((errors+info).join(', '))
+    elsif is_critical?(max_latency)
+      critical(info.join(', '))
     elsif is_warning?(max_latency)
-      warning(errors.join(', '))
+      warning(info.join(', '))
     else
       ok("All slaves are running normally (max_latency=#{max_latency})")
     end
