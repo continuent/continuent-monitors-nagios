@@ -77,7 +77,7 @@ class ContinuentNagiosMonitorOnline
         rep_status = status.replicator_status(name)
         
         if ds_status == "SHUNNED"
-          if opt(:skip_shunned) == true || opt(:skip_manually_shunned) == true && ds_lastshunreason == "MANUALLY-SHUNNED"
+          if opt(:skip_shunned) == true || (opt(:skip_manually_shunned) == true && ds_lastshunreason == "MANUALLY-SHUNNED")
             shunned << name
             next
           end
@@ -95,7 +95,7 @@ class ContinuentNagiosMonitorOnline
         ds_lastshunreason = status.datasource_value(name, 'lastShunReason')
         
         if ds_status == "SHUNNED"
-          if opt(:skip_shunned) == true || opt(:skip_manually_shunned) == true && ds_lastshunreason == "MANUALLY-SHUNNED"
+          if opt(:skip_shunned) == true || (opt(:skip_manually_shunned) == true && ds_lastshunreason == "MANUALLY-SHUNNED")
             shunned << name
             next
           end

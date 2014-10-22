@@ -74,7 +74,7 @@ class ContinuentNagiosMonitorConnector
     end
     
     unless TI.is_connector?()
-      unknown("This server is not a Tungsten Connector")
+      ok("This server is not running a Tungsten Connector")
     end
     
     if opt(:defaults_file).to_s() == ""
