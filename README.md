@@ -16,3 +16,6 @@ check_by_ssh -H $HOSTADDRESS$ -t 30 -o="StrictHostKeyChecking=no" -C "sudo -u tu
 ## Other useful projects
 
 * https://github.com/Ericbla/check_jstat
+
+## Compatibility
+These checks only work on the continuent-tungsten-2.x series they are not compatible with continuent-tungsten-1.x.
