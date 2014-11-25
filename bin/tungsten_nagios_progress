@@ -60,7 +60,8 @@ class ContinuentNagiosMonitorProgress
 
     stages = { "master" => ["binlog-to-q","q-to-thl"],
                "slave" => ["remote-to-thl","thl-to-q","q-to-dbms"],
-               "relay" => ["remote-to-thl","thl-to-q","q-to-dbms"]
+               "relay" => ["remote-to-thl","thl-to-q","q-to-dbms"],
+               "direct" => ["d-binlog-to-q","d-q-to-thl","d-thl-to-pq","d-pw-to-dbms"]
              }
     pre_results=Hash.new
 
