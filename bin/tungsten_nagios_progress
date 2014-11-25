@@ -58,17 +58,16 @@ class ContinuentNagiosMonitorProgress
       critical("The #{opt(:service)} replication service is not ONLINE")
     end
 
+    stages = { "master" => ["binlog-to-q","q-to-thl"],
+               "slave" => ["remote-to-thl","thl-to-q","q-to-dbms"],
+               "relay" => ["remote-to-thl","thl-to-q","q-to-dbms"]
+             }
+    pre_results=Hash.new
+
     role=TI.trepctl_value(opt(:service), "role").to_s()
 
-    if role == 'master'
-      pre_binlog_to_q=TI.trepctl_name_value(opt(:service),'tasks', 'binlog-to-q',"appliedLastSeqno").to_s().to_f()
-      pre_q_to_thl=TI.trepctl_name_value(opt(:service), 'tasks', 'q-to-thl',"appliedLastSeqno").to_s().to_f()
-    end
-
-    if role == 'slave' or role == 'relay'
-      pre_remote_to_thl=TI.trepctl_name_value(opt(:service),'tasks', 'remote-to-thl',"appliedLastSeqno").to_s().to_f()
-      pre_thl_to_q=TI.trepctl_name_value(opt(:service),'tasks', 'thl-to-q',"appliedLastSeqno").to_s().to_f()
-      pre_q_to_dbms=TI.trepctl_name_value(opt(:service),'tasks', 'q-to-dbms',"appliedLastSeqno").to_s().to_f()
+    stages[role].each do |stage_name|
+      pre_results[stage_name]=TI.trepctl_name_value(opt(:service),'tasks', stage_name ,"appliedLastSeqno").to_s().to_f()
     end
 
     if TI.is_commercial?()
@@ -81,22 +80,8 @@ class ContinuentNagiosMonitorProgress
     end
 
     replicator_making_progress=false
-    if role == 'master'
-      if TI.trepctl_name_value(opt(:service),'tasks', 'binlog-to-q',"appliedLastSeqno").to_s().to_f()-pre_binlog_to_q > 0
-        replicator_making_progress=true
-      end
-      if TI.trepctl_name_value(opt(:service), 'tasks', 'q-to-thl',"appliedLastSeqno").to_s().to_f()-pre_q_to_thl > 0
-        replicator_making_progress=true
-      end
-    end
-    if role == 'slave' or role == 'relay'
-      if TI.trepctl_name_value(opt(:service),'tasks', 'remote-to-thl',"appliedLastSeqno").to_s().to_f() - pre_remote_to_thl > 0
-        replicator_making_progress=true
-      end
-      if TI.trepctl_name_value(opt(:service),'tasks', 'thl-to-q',"appliedLastSeqno").to_s().to_f() - pre_thl_to_q > 0
-        replicator_making_progress=true
-      end
-      if TI.trepctl_name_value(opt(:service),'tasks', 'q-to-dbms',"appliedLastSeqno").to_s().to_f() - pre_q_to_dbms > 0
+    stages[role].each do |stage_name|
+      if TI.trepctl_name_value(opt(:service),'tasks', stage_name ,"appliedLastSeqno").to_s().to_f() -  pre_results[stage_name] > 0
         replicator_making_progress=true
       end
     end
