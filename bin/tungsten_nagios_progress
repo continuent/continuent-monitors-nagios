@@ -31,6 +31,7 @@ class ContinuentNagiosMonitorProgress
   private
   
   def main
+
     unless TI.is_replicator?()
       critical("The server is not a Tungsten Replicator")
     end
@@ -58,37 +59,44 @@ class ContinuentNagiosMonitorProgress
       critical("The #{opt(:service)} replication service is not ONLINE")
     end
 
+    unless ["appliedLastSeqno","currentLastSeqno"].include?(opt(:metric))
+      critical("Unknown metric #{opt(:metric)}")
+    end
+
     stages = { "master" => ["binlog-to-q","q-to-thl"],
                "slave" => ["remote-to-thl","thl-to-q","q-to-dbms"],
                "relay" => ["remote-to-thl","thl-to-q","q-to-dbms"],
-               "direct" => ["d-binlog-to-q","d-q-to-thl","d-thl-to-pq","d-pw-to-dbms"]
+               "direct" => ["d-binlog-to-q","d-q-to-thl","d-thl-to-pq",'d-pw-to-dbms']
              }
     pre_results=Hash.new
 
     role=TI.trepctl_value(opt(:service), "role").to_s()
 
+    pre_values = TI.trepctl_name_all(opt(:service),'tasks')
+
     stages[role].each do |stage_name|
-      pre_results[stage_name]=TI.trepctl_name_value(opt(:service),'tasks', stage_name ,"appliedLastSeqno").to_s().to_f()
+      pre_results[stage_name]=find_values(pre_values,stage_name,opt(:metric))
     end
 
+ 
     if TI.is_commercial?()
       TI.ensure_cctrl("cluster heartbeat")
     end
-
+    
     if opt(:delay).is_a?(Integer)
       TU.debug("Go to sleep for #{opt(:delay)} seconds")
       sleep(opt(:delay))
     end
 
     replicator_making_progress=false
+
+    post_values = TI.trepctl_name_all(opt(:service),'tasks')
     stages[role].each do |stage_name|
-      if TI.trepctl_name_value(opt(:service),'tasks', stage_name ,"appliedLastSeqno").to_s().to_f() -  pre_results[stage_name] > 0
+      if find_values(post_values,stage_name,opt(:metric)) -  pre_results[stage_name] > 0
         replicator_making_progress=true
       end
-    end
-
-
-    if replicator_making_progress 
+    end 
+    if replicator_making_progress
       ok("Tungsten Replicator #{opt(:service)} service is making progress")
     else
       critical("Tungsten Replicator #{opt(:service)} service did not show progress")
@@ -111,10 +119,29 @@ class ContinuentNagiosMonitorProgress
       :on => "--service String",
       :help => "The replication service or cluster to check"
     })
+
+    add_option(:metric, {
+      :on=> "--metric String",
+      :help=>"The field to use to determine progess",
+      :default=> "currentLastSeqno"
+    })
   end
   
   def script_name
     "tungsten_nagios_progress"
+  end
+
+  def find_values(input_values,stage,key)
+
+    #Note: When currentLastSeqno is selected it will be combined with currentLastfragno to ensure the field
+    #      always go up.
+    stage_values=input_values.find{|x| x['stage']=stage}
+    if key=='currentLastSeqno'
+      (stage_values['currentLastSeqno']+stage_values['currentLastFragno'].rjust(5,'0')).to_s().to_f()
+    else
+      stage_values[key].to_s().to_f()
+    end
+
   end
   
   self.new().run()
