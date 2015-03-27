@@ -3,17 +3,47 @@ continuent-monitors-nagios
 
 A Ruby Gem containing Nagios checks for Continuent Tungsten and Tungsten Replicator
 
-## Installation 
+# Installation 
 
-```gem install continuent-monitors-nagios```
+* Install the Ruby gem
+ 
+ ```sudo gem install continuent-monitors-nagios```
+* Install the Nagios NRPE service
+* Add the IP of your Nagios server to the ```/etc/nagios/nrpe.cfg``` configuration file. For example:
 
-## Example Nagios Service Check
+ ```allowed_hosts=127.0.0.1,192.168.2.20```
+* Add the Tungsten check commands that you want to execute to the ```/etc/nagios/nrpe.cfg``` configuration file. For example:
 
-```
-check_by_ssh -H $HOSTADDRESS$ -t 30 -o="StrictHostKeyChecking=no" -C "sudo -u tungsten /usr/bin/tungsten_nagios_latency -w 60 -c 120 --directory=/opt/continuent/"
-```
+ ```command[tungsten_nagios_online]=/usr/bin/tungsten_nagios_online```
 
-## Global Options
+ If the commands need to be executed with superuser privileges, the ```/etc/sudo``` or ```/etc/sudoers``` file must be updated to enable the commands to be executed as root through sudo as the nagios user. This can be achieved by updating the configuration file, usually performed by using the visudo command:
+ 
+ ```nagios          ALL=(tungsten)  NOPASSWD: /usr/bin/tungsten_nagios_*```
+ 
+ In addition, the sudo command should be added to the Tungsten check commands within the Nagios ```/etc/nagios/nrpe.cfg```, for example:
+ 
+ ```command[tungsten_nagios_online]=/usr/bin/sudo -u tungsten /usr/bin/tungsten_nagios_online```
+* Start the NRPE service:
+
+ ```shell> sudo /etc/init.d/nagios-nrpe-server start```
+*  Add an entry to your Nagois ```services.cfg``` file for each service you want to monitor:
+ 
+ ```define service {
+         host_name database
+         service_description     check_tungsten_online
+         check_command           check_nrpe! -H $HOSTADDRESS$  -t 30 -c check_tungsten_online
+         retry_check_interval    1
+         check_period            24x7
+         max_check_attempts      3
+         flap_detection_enabled  1
+         notifications_enabled   1
+         notification_period     24x7
+         notification_interval   60
+         notification_options    c,f,r,u,w
+         normal_check_interval   5
+ }```
+
+# Global Options
 
 --directory  
 Use this installed Tungsten directory as the base for all operations
@@ -35,12 +65,18 @@ Provide return code and logging messages as a JSON object after the script finis
 --net-ssh-option=key=value  
 Set the Net::SSH option for remote system calls. Valid options can be found at http://net-ssh.github.com/ssh/v2/api/classes/Net/SSH.html#M000002
 
-## Global Outputs
+# Global Outputs
 
-OK:  
-CRITICAL:   
-UNKNOWN:    
-The above will usually be appended with a text message depending on the individual script being run.
+Each of these will usually be appended with a text message depending on the individual script being run.
+
+* OK:  
+* WARNING:
+* CRITICAL:   
+* UNKNOWN:
+
+# Available Checks
+
+Use the ```--help``` option for each command to see the full list of available options.
 
 ## tungsten_nagios_backups
 Compare the age of the last backup with that given in the option max-backup-age.  
@@ -76,10 +112,37 @@ The defaults file to use when connecting to MySQL
 --statement String  
 The command to run against the Tungsten Connector. The default command is "tungsten connection status".
 
+## tungsten_nagios_latency
+
+Check that all applied latency values are under a given number of seconds.
+
+## tungsten_nagios_monitor_threads
+
+Check that the number of Java threads for one of the VMware Continuent services is under a given value.
+
+## tungsten_nagios_online
+
+Check that all replication services and datasources are ONLINE.
+
+## tungsten_nagios_policy
+
+Check that the cluster policy is set to AUTOMATIC.
+
+## tungsten_nagios_progress
+
+Check that the VMware Continuent Replicator process is successfully applies a heartbeat event created by the script.
+
+## tungsten_nagios_relative_latency
+
+Check that all relative latency values are under a given number of seconds.
+
+## tungsten_nagios_services
+
+Check that all configured VMware Continuent services are running.
 
 ## Other useful projects
 
 * https://github.com/Ericbla/check_jstat
 
 ## Compatibility
-These checks only work on the continuent-tungsten-2.x series they are not compatible with continuent-tungsten-1.x.
+These checks only work on VMware Continuent 2.0 and later.
