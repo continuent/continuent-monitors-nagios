@@ -39,7 +39,7 @@ class ContinuentNagiosMonitorPolicy
       critical("The Continuent Tungsten Manager is not running")
     end
     
-    status = TI.status()
+    status = TI.status(opt(:service))
     if status.policy() == "AUTOMATIC"
       ok("Cluster is in #{status.policy()} mode")
     else
@@ -51,6 +51,11 @@ class ContinuentNagiosMonitorPolicy
     super()
     
     description("Check that the local cluster is running in the AUTOMATIC policy")
+    
+    add_option(:service, {
+      :on => "--service String",
+      :help => "The replication service or cluster to check"
+    })
   end
   
   def script_name
