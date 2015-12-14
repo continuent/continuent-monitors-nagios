@@ -40,6 +40,10 @@ class ContinuentNagiosMonitorPolicy
     end
     
     status = TI.status(opt(:service))
+    if opt(:skip_remote_checks) == true && status.coordinator() != TI.hostname()
+      ok("Not running check because this node is not the coordinator")
+    end
+    
     if status.policy() == "AUTOMATIC"
       ok("Cluster is in #{status.policy()} mode")
     else
@@ -55,6 +59,13 @@ class ContinuentNagiosMonitorPolicy
     add_option(:service, {
       :on => "--service String",
       :help => "The replication service or cluster to check"
+    })
+    
+    add_option(:skip_remote_checks, {
+      :on => "--skip-remote-checks [String]",
+      :help => "Ignore Continuent datasources that are not the local host",
+      :parse => method(:parse_boolean_option_blank_is_true), 
+      :default => false
     })
   end
   
