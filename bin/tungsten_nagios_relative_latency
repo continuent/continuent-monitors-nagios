@@ -60,6 +60,11 @@ class ContinuentNagiosMonitorLatency
     else
       status.replicators().each{
         |hostname|
+        if opt(:skip_remote_checks) == true && TU.is_localhost?(hostname) != true
+          TU.debug("Skipping #{hostname} because it doesn't refer to the local host")
+          next
+        end
+        
         # Ignore this host since the datasource is shunned
         if opt(:skip_shunned) == true && status.is_physical?()
           if status.datasource_status(hostname) == "SHUNNED"
@@ -160,6 +165,13 @@ class ContinuentNagiosMonitorLatency
       :help => "Display relative latency performance data for every replicator",
       :parse => method(:parse_boolean_option),
       :default => "false",
+    })
+    
+    add_option(:skip_remote_checks, {
+      :on => "--skip-remote-checks [String]",
+      :help => "Ignore Continuent datasources that are not the local host",
+      :parse => method(:parse_boolean_option_blank_is_true), 
+      :default => false
     })
   end
   

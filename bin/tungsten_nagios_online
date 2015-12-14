@@ -62,6 +62,11 @@ class ContinuentNagiosMonitorOnline
       # Replication Only
       status.replicators().each{
         |name|
+        if opt(:skip_remote_checks) == true && TU.is_localhost?(name) != true
+          TU.debug("Skipping #{name} because it doesn't refer to the local host")
+          next
+        end
+        
         rep_status = status.replicator_status(name)
 
         if rep_status != "ONLINE"
@@ -72,6 +77,12 @@ class ContinuentNagiosMonitorOnline
       # Physical Dataservice
       status.replicators().each{
         |name|
+        if opt(:skip_remote_checks) == true && TU.is_localhost?(name) != true
+          TU.debug("Skipping #{name} because it doesn't refer to the local host")
+          next
+        end
+        
+        ds_role = status.datasource_role(name)
         ds_status = status.datasource_status(name)
         ds_lastshunreason = status.datasource_value(name, 'lastShunReason')
         rep_status = status.replicator_status(name)
@@ -82,12 +93,24 @@ class ContinuentNagiosMonitorOnline
             next
           end
         end
-
-        if ds_status != "ONLINE" || rep_status != "ONLINE"
-          not_online << name
+        
+        if ds_role == "standby"
+          # The datasource is in standby so the datasource is expected to be
+          # OFFLINE, but the replicator status should still be
+          if rep_status != "ONLINE"
+            not_online << name
+          end
+        else
+          if ds_status != "ONLINE" || rep_status != "ONLINE"
+            not_online << name
+          end
         end
       }
     else
+      if opt(:skip_remote_checks) == true && status.coordinator() != TI.hostname()
+        ok("Not running check because this node is not the coordinator")
+      end
+      
       # Composite Dataservices
       status.datasources().each{
         |name|
@@ -126,16 +149,23 @@ class ContinuentNagiosMonitorOnline
 
     add_option(:skip_shunned, {
       :on => "--skip-shunned String",
-      :help => "Ignore Continuent Tungsten datasources that have been shunned.",
+      :help => "Ignore Continuent datasources that have been shunned.",
       :parse => method(:parse_boolean_option),
       :default => "false"
     })
 
     add_option(:skip_manually_shunned, {
       :on => "--skip-manually-shunned String",
-      :help => "Ignore Continuent Tungsten datasources that have been shunned manually.",
+      :help => "Ignore Continuent datasources that have been shunned manually.",
       :parse => method(:parse_boolean_option),
       :default => "false"
+    })
+    
+    add_option(:skip_remote_checks, {
+      :on => "--skip-remote-checks [String]",
+      :help => "Ignore Continuent datasources that are not the local host",
+      :parse => method(:parse_boolean_option_blank_is_true), 
+      :default => false
     })
   end
   
